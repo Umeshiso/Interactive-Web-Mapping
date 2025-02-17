@@ -9,9 +9,28 @@
     <style>
         body { margin: 0; padding: 0; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        
+
+        #map-title {
+            position: absolute;
+            top: 10px; 
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9); 
+            padding: 15px 20px;
+            font-family: Arial, sans-serif;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            text-align: center;
+            z-index: 1000; 
+        }
+
+
         .map-overlay {
             position: absolute;
-            background:rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.8);
             margin: 10px;
             padding: 10px;
             font-family: Arial, sans-serif;
@@ -19,7 +38,7 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
         #legend { bottom: 30px; left: 10px; }
-        #info { top: 10px; left: 10px; }
+        #info { top: 60px; left: 10px; }
         .legend-key {
             display: inline-block;
             width: 12px;
@@ -29,107 +48,103 @@
     </style>
 </head>
 <body>
+
+    <div id="map-title">Washington COVID-19 Vaccination Rate Map</div>
+
     <div id="map"></div>
+
     <div class="map-overlay" id="info">
-        <h3>Washington COVID-19 Vaccination Rate</h3>
-        <p>Hover over a county!</p>
+        <h3>Hover over a county!</h3>
     </div>
+
     <div class="map-overlay" id="legend"></div>
+
     <script>
-        mapboxgl.accessToken = 'pk.eyJ1IjoiaGFydTAwMDAwIiwiYSI6ImNtNnByMWg1azBtM2EyanB5d3p3OGw2OG8ifQ.g6wqR6j807Is4a1vwSLjEg'; // Mapboxのトークンを設定
+        mapboxgl.accessToken = 'pk.eyJ1IjoiaGFydTAwMDAwIiwiYSI6ImNtNnByMWg1azBtM2EyanB5d3p3OGw2OG8ifQ.g6wqR6j807Is4a1vwSLjEg';
 
-const map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/light-v10',
-    center: [-120.7401, 47.7511], 
-    zoom: 6
-});
-
-
-async function loadGeoJSON() {
-    try {
-        const response = await fetch('assets/wa-covid-data-102521.geojson');
-        const geojsonData = await response.json();
-        console.log("GeoJSON Loaded Successfully:", geojsonData);
-
-      
-        map.on('load', () => {
-            map.addSource('covidData', {
-                type: 'geojson',
-                data: geojsonData
-            });
-
-           
-            map.addLayer({
-                'id': 'covid-layer',
-                'type': 'fill',
-                'source': 'covidData',
-                'paint': {
-                   
-'fill-color': [
-    'step',
-    ['/', ['get', 'fullyVaxPer10k'], 100],  
-    '#FFEDA0', 9,   // 0-9%
-    '#FED976', 19,  
-    '#FEB24C', 49,  
-    '#FD8D3C', 69, 
-    '#E31A1C', 89,  
-    '#800026'       
-],
-
-                    'fill-outline-color': '#BBBBBB',
-                    'fill-opacity': 0.75
-                }
-            });
-
-            console.log("GeoJSON Data in Map:", geojsonData);
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v10',
+            center: [-120.7401, 47.7511], 
+            zoom: 6
         });
 
+        async function loadGeoJSON() {
+            try {
+                const response = await fetch('assets/wa-covid-data-102521.geojson');
+                const geojsonData = await response.json();
+                console.log("GeoJSON Loaded Successfully:", geojsonData);
 
-        createLegend();
-        
+                map.on('load', () => {
+                    map.addSource('covidData', {
+                        type: 'geojson',
+                        data: geojsonData
+                    });
 
-        addHoverEffect();
+                    map.addLayer({
+                        'id': 'covid-layer',
+                        'type': 'fill',
+                        'source': 'covidData',
+                        'paint': {
+                            'fill-color': [
+                                'step',
+                                ['/', ['get', 'fullyVaxPer10k'], 100],  
+                                '#FFEDA0', 9,  
+                                '#FED976', 19,  
+                                '#FEB24C', 49,  
+                                '#FD8D3C', 69,  
+                                '#E31A1C', 89,  
+                                '#800026'       
+                            ],
+                            'fill-outline-color': '#BBBBBB',
+                            'fill-opacity': 0.75
+                        }
+                    });
 
-    } catch (error) {
-        console.error("Error loading GeoJSON:", error);
-    }
-}
+                    console.log("GeoJSON Data in Map:", geojsonData);
+                });
 
+                createLegend();
+                addHoverEffect();
+            } catch (error) {
+                console.error("Error loading GeoJSON:", error);
+            }
+        }
 
-function createLegend() {
-    const legend = document.getElementById('legend');
-    const layers = ['0-9%', '10-19%', '20-49%', '50-69%', '70-89%', '90%+'];
-    const colors = ['#FFEDA0', '#FED976', '#FEB24C', '#FD8D3C', '#E31A1C'];
+        function createLegend() {
+            const legend = document.getElementById('legend');
+            legend.innerHTML = '<h4>Vaccination Rate (%)</h4>';
 
-    layers.forEach((layer, i) => {
-        const item = document.createElement('div');
-        const key = document.createElement('span');
-        key.className = 'legend-key';
-        key.style.backgroundColor = colors[i];
-        item.appendChild(key);
-        item.innerHTML += layer;
-        legend.appendChild(item);
-    });
-}
+            const layers = ['0-9%', '10-19%', '20-49%', '50-69%', '70-89%', '90%+'];
+            const colors = ['#FFEDA0', '#FED976', '#FEB24C', '#FD8D3C', '#E31A1C', '#800026'];
 
+            layers.forEach((layer, i) => {
+                const item = document.createElement('div');
+                const key = document.createElement('span');
+                key.className = 'legend-key';
+                key.style.backgroundColor = colors[i];
+                key.style.display = 'inline-block';
+                key.style.width = '12px';
+                key.style.height = '12px';
+                key.style.marginRight = '5px';
 
-function addHoverEffect() {
-    map.on('mousemove', (e) => {
-        const features = map.queryRenderedFeatures(e.point, { layers: ['covid-layer'] });
-        document.getElementById('info').innerHTML = features.length ?
-            `<h3>${features[0].properties.name}</h3>
-             <p>Fully Vaccinated: <strong>${features[0].properties.fullyVaxPer10k || 'N/A'} per 10k</strong></p>` :
-            `<p>Hover over a county!</p>`;
-    });
-}
+                item.appendChild(key);
+                item.innerHTML += layer;
+                legend.appendChild(item);
+            });
+        }
 
+        function addHoverEffect() {
+            map.on('mousemove', (e) => {
+                const features = map.queryRenderedFeatures(e.point, { layers: ['covid-layer'] });
+                document.getElementById('info').innerHTML = features.length ?
+                    `<h3>${features[0].properties.name}</h3>
+                     <p>Fully Vaccinated: <strong>${features[0].properties.fullyVaxPer10k || 'N/A'} per 10k</strong></p>` :
+                    `<p>Hover over a county!</p>`;
+            });
+        }
 
-loadGeoJSON();
-
-        
-  
-        console.log("Mapbox Token:", mapboxgl.accessToken);
+        loadGeoJSON();
     </script>
 </body>
 </html>
