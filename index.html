@@ -1,14 +1,135 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ワクチン接種率マップ</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <meta charset="utf-8">
+    <title>Washington COVID-19 Vaccination Rate</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        .map-overlay {
+            position: absolute;
+            background:rgba(255, 255, 255, 0.8);
+            margin: 10px;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+            border-radius: 5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        #legend { bottom: 30px; left: 10px; }
+        #info { top: 10px; left: 10px; }
+        .legend-key {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+        }
+    </style>
 </head>
 <body>
-    <h1>ワシントン州のワクチン接種率マップ</h1>
-    <div id="map" style="width: 100%; height: 500px;"></div>
-    <script src="assets/script.js"></script>
+    <div id="map"></div>
+    <div class="map-overlay" id="info">
+        <h3>Washington COVID-19 Vaccination Rate</h3>
+        <p>Hover over a county!</p>
+    </div>
+    <div class="map-overlay" id="legend"></div>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiaGFydTAwMDAwIiwiYSI6ImNtNnByMWg1azBtM2EyanB5d3p3OGw2OG8ifQ.g6wqR6j807Is4a1vwSLjEg'; // Mapboxのトークンを設定
+
+const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/light-v10',
+    center: [-120.7401, 47.7511], 
+    zoom: 6
+});
+
+
+async function loadGeoJSON() {
+    try {
+        const response = await fetch('assets/wa-covid-data-102521.geojson');
+        const geojsonData = await response.json();
+        console.log("GeoJSON Loaded Successfully:", geojsonData);
+
+      
+        map.on('load', () => {
+            map.addSource('covidData', {
+                type: 'geojson',
+                data: geojsonData
+            });
+
+           
+            map.addLayer({
+                'id': 'covid-layer',
+                'type': 'fill',
+                'source': 'covidData',
+                'paint': {
+                   
+'fill-color': [
+    'step',
+    ['/', ['get', 'fullyVaxPer10k'], 100],  
+    '#FFEDA0', 9,   // 0-9%
+    '#FED976', 19,  
+    '#FEB24C', 49,  
+    '#FD8D3C', 69, 
+    '#E31A1C', 89,  
+    '#800026'       
+],
+
+                    'fill-outline-color': '#BBBBBB',
+                    'fill-opacity': 0.75
+                }
+            });
+
+            console.log("GeoJSON Data in Map:", geojsonData);
+        });
+
+
+        createLegend();
+        
+
+        addHoverEffect();
+
+    } catch (error) {
+        console.error("Error loading GeoJSON:", error);
+    }
+}
+
+
+function createLegend() {
+    const legend = document.getElementById('legend');
+    const layers = ['0-9%', '10-19%', '20-49%', '50-69%', '70-89%', '90%+'];
+    const colors = ['#FFEDA0', '#FED976', '#FEB24C', '#FD8D3C', '#E31A1C'];
+
+    layers.forEach((layer, i) => {
+        const item = document.createElement('div');
+        const key = document.createElement('span');
+        key.className = 'legend-key';
+        key.style.backgroundColor = colors[i];
+        item.appendChild(key);
+        item.innerHTML += layer;
+        legend.appendChild(item);
+    });
+}
+
+
+function addHoverEffect() {
+    map.on('mousemove', (e) => {
+        const features = map.queryRenderedFeatures(e.point, { layers: ['covid-layer'] });
+        document.getElementById('info').innerHTML = features.length ?
+            `<h3>${features[0].properties.name}</h3>
+             <p>Fully Vaccinated: <strong>${features[0].properties.fullyVaxPer10k || 'N/A'} per 10k</strong></p>` :
+            `<p>Hover over a county!</p>`;
+    });
+}
+
+
+loadGeoJSON();
+
+        
+  
+        console.log("Mapbox Token:", mapboxgl.accessToken);
+    </script>
 </body>
 </html>
